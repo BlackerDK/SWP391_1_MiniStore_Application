@@ -1,0 +1,159 @@
+drop database ministore
+create database ministore
+use ministore
+
+
+create table Employee (
+IdEmp nvarchar(20) primary key,--EmpXXX: vd: Emp001
+FullNameEmp nvarchar(50) not null,--Nguyen Van A
+CCCD nvarchar(50) not null, 
+DoB date not null, 
+PhoneEmp nvarchar(15)not null,
+DateJoin date not null,
+PictureEmp nvarchar(250)
+)
+select* from Employee
+insert into Employee(IdEmp,FullNameEmp,CCCD,DoB,PhoneEmp,DateJoin)
+values ('Admin','Admin','123456789','01/01/2000','123456789','01/01/2000')--đừng động vào 
+insert into Employee(IdEmp,FullNameEmp,CCCD,DoB,PhoneEmp,DateJoin)--mẫu example thiếu hình ảnh 
+values ('Emp001','Nguyen Van A','12367583029386','01/01/2008','0387654329',GETDATE());
+
+create table Product (
+SKU nvarchar(20) primary key,--xxxxxxxxxxxxx
+NameProduct nvarchar(50) not null,--cocacola,redbull,vinamilk,Socola,choco-pie
+QuantityProduct int not null,
+PriceProduct float not null,
+ProductType nvarchar(10) not null,--F,D,O
+PictureProduct nvarchar(250)
+)
+select * from Product
+insert into Product(SKU,NameProduct,QuantityProduct,PriceProduct,ProductType)
+values('12345676','cocacola',50,25000,'F')-- mẫu thiếu hình ảnh sản phẩm 
+
+create table Member (
+PhoneMember nvarchar(20) primary key,
+point int not null,--0-->9999
+)
+insert into Member(PhoneMember,point)
+values('037456345',50)--mẫu 
+
+create table Orders (
+IdOrder nvarchar(20) primary key,--odxxxxxx
+SKU nvarchar(20)not null,
+PhoneMember nvarchar(20)not null,
+IdEmp nvarchar(20)not null,
+QuantityOrders int not null ,
+NameProduct nvarchar(50) not null,
+PriceProduct float not null,
+Date date not null,
+total float not null,
+FOREIGN KEY (SKU) REFERENCES Product(SKU),
+FOREIGN KEY (PhoneMember) REFERENCES Member(PhoneMember),
+FOREIGN KEY (IdEmp) REFERENCES Employee(IdEmp),
+)
+insert into Orders(IdOrder,SKU,PhoneMember,IdEmp,QuantityOrders,NameProduct,PriceProduct,Date,total)
+values ('od0001','12345676','037456345','Emp001',1,'cocacola',25000,GETDATE(),25000)
+
+create table WorkSheet (
+ IdWorkSheet nvarchar(20) primary key,--wsxxxx
+ IdEmp nvarchar(20) not null,
+ Date date not null,
+ Sheet int not null,--1,2,3
+ FOREIGN KEY (IdEmp) REFERENCES Employee(IdEmp),
+)
+insert into WorkSheet(IdWorkSheet,IdEmp,Date,Sheet)
+values('ws0001','Emp001','01/01/2020',1)
+
+
+create table Salary (
+ IdSalary nvarchar(20) primary key,--Sxxxx
+ IdEmp nvarchar(20) not null,
+ FOREIGN KEY (IdEmp) REFERENCES Employee(IdEmp),
+ TotalSalary float not null,
+ DateImonth date not null,
+ DateOmonth date not null
+)
+
+insert into Salary(IdSalary,IdEmp,TotalSalary,DateImonth,DateOmonth)
+values ('S0001','Emp001',4000000,'01/01/2020','01/02/2020')
+
+create table Roles(
+	IdRole int primary key,--1,2,3
+	NameRole varchar(20) not null ,--ADMIN,EMP,GUARD
+)
+insert into Roles(IdRole,NameRole)
+values(1,'ADMIN')
+insert into Roles(IdRole,NameRole)
+values(2,'EMP')
+insert into Roles(IdRole,NameRole)
+values(3,'GUARD')
+
+create table Account (
+  UserName varchar(20) primary key,
+  PassWord varchar(20),
+  IdRole int not null,--1,2,3
+  IdEmp nvarchar(20) not null,
+  FOREIGN KEY (IdRole) REFERENCES Roles(IdRole),
+  FOREIGN KEY (IdEmp) REFERENCES Employee(IdEmp),
+)
+select * from Account
+INSERT INTO Account(UserName,PassWord,IdRole,IdEmp)
+VALUES ('admin','123',1,'Admin')--account Admin
+INSERT INTO Account(UserName,PassWord,IdRole,IdEmp)
+VALUES ('emp1','123',2,'Emp001')--mẫu tạo acc count Emp
+
+
+create table Permission (
+  PermissionID varchar(20) primary key,--P1,P2,P3,P4,P5,P6,P7
+  PermissionDescribe varchar(20) not null,--LOGIN,MANAGE_PRODUCT,MANAGE_EMPLOYEE,MANAGE_REVENUS,MANAGE_SALARY,ORDER_PRODUCT,CHECK_IN
+  IdRole int not null,--1,2,3
+  FOREIGN KEY (IdRole) REFERENCES Roles (IdRole)
+)
+insert into Permission(PermissionID,PermissionDescribe,IdRole)
+values ('P1','LOGIN',1)
+insert into Permission(PermissionID,PermissionDescribe,IdRole)
+values ('P2','LOGIN',2)
+insert into Permission(PermissionID,PermissionDescribe,IdRole)
+values ('P3','LOGIN',3)
+insert into Permission(PermissionID,PermissionDescribe,IdRole)
+values ('P4','MANAGE_PRODUCT',1)
+insert into Permission(PermissionID,PermissionDescribe,IdRole)
+values ('P5','MANAGE_EMPLOYEE',1)
+insert into Permission(PermissionID,PermissionDescribe,IdRole)
+values ('P6','MANAGE_REVENUS',1)
+insert into Permission(PermissionID,PermissionDescribe,IdRole)
+values ('P7','MANAGE_SALARY',1)
+insert into Permission(PermissionID,PermissionDescribe,IdRole)
+values ('P8','ORDER_PRODUCT',2)
+insert into Permission(PermissionID,PermissionDescribe,IdRole)
+values ('P9','CHECK_IN',2)
+insert into Permission(PermissionID,PermissionDescribe,IdRole)
+values ('P10','CHECK_IN',3)
+
+
+
+
+
+------------------------------------------------------------------
+Create trigger CapNhatKho on Orders after insert as
+begin Update Product
+   set QuantityProduct = QuantityProduct -(
+             select QuantityOrders 
+			 from inserted
+			 where IdProduct = Product.IdProduct
+   )
+   from Product
+   join inserted on Product.IdProduct = inserted.IdProduct
+   end
+
+create trigger CapNhatPoi on Orders after insert as
+begin 
+    update Member 
+	set point += (
+	  select total
+	  from inserted
+	  where PhoneMember = Member.PhoneMember 
+	 ) /1000  
+	from Member
+ join inserted on Member.PhoneMember = inserted.PhoneMember
+end
